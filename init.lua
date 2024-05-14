@@ -118,6 +118,23 @@ vim.opt.clipboard = 'unnamedplus'
 -- Enable break indent
 vim.opt.breakindent = true
 
+-- Save all buffer
+vim.keymap.set('n', '<leader>wa', ':wall<CR>', { noremap = true, desc = '[W]rite [A]ll' })
+vim.keymap.set('n', '<leader>wf', ':w<CR>', { noremap = true, desc = '[W]rite [F]ile' })
+
+-- Create command do save with qw
+vim.api.nvim_command 'cmap qw wq'
+vim.api.nvim_command 'cmap WQ wq'
+vim.api.nvim_command 'cmap QW wq'
+
+-- Navigate buffers
+vim.keymap.set('n', '<S-h>', ':bp<CR>', { noremap = true, desc = '[G]oto [P]previous Buffer' })
+vim.keymap.set('n', '<S-l>', ':bn<CR>', { noremap = true, desc = '[G]oto [N]ext Buffer' })
+
+vim.keymap.set('n', '[c', function()
+  require('treesitter-context').go_to_context(vim.v.count1)
+end, { silent = true })
+
 -- Save undo history
 vim.opt.undofile = true
 
@@ -566,7 +583,7 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         clangd = {},
-        gopls = {},
+        -- gopls = {},
         pyright = {},
         ruff = {},
         rust_analyzer = {},
