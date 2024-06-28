@@ -242,6 +242,9 @@ vim.opt.rtp:prepend(lazypath)
 --
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
+  -- python import
+  { 'stevanmilic/nvim-lspimport' },
+
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
 
@@ -524,6 +527,19 @@ require('lazy').setup({
           --  For example, in C this would take you to the header.
           map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
+          -- Signature hel
+          --  For example, in C this would take you to the header.
+          map('<C-k>', vim.lsp.buf.signature_help, '[G]oto [S]signature [H]elp')
+
+          -- workspace add folder
+          map('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]add folder')
+
+          -- workspace remove folder
+          map('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove folder')
+
+          -- workspace list folder
+          map('<leader>wl', vim.lsp.buf.list_workspace_folders, '[W]orkspace [L]ist folder')
+
           -- The following two autocommands are used to highlight references of the
           -- word under your cursor when your cursor rests there for a little while.
           --    See `:help CursorHold` for information about when this is executed
@@ -644,10 +660,16 @@ require('lazy').setup({
         'jsonlint',
         'jsonnet-language-server',
         'lua-language-server',
+        'markdownlint',
         'mypy',
         'powershell-editor-services',
         'prettier',
         'pyright',
+        'ruff-lsp', -- linter for python (includes flake8, pep8, etc.)
+        'debugpy', -- debugger
+        'black', -- formatter
+        'isort', -- organize imports
+        'taplo', -- LSP for toml (for pyproject.toml files)
         'ruff',
         'rust-analyzer',
         'shellcheck',
@@ -705,12 +727,11 @@ require('lazy').setup({
         }
       end,
       formatters_by_ft = {
-        lua = { 'stylua' },
         go = { 'goimports', 'gofmt' },
         javascript = { { 'prettierd', 'prettier' } },
         json = { 'jsonlint' },
         lua = { 'stylua' },
-        markdown = { 'markdownlint' },
+        markdown = { 'inject' },
         python = function(bufnr)
           if require('conform').get_formatter_info('ruff_format', bufnr).available then
             return { 'ruff_format' }
@@ -760,6 +781,8 @@ require('lazy').setup({
       --  nvim-cmp does not ship with all sources by default. They are split
       --  into multiple repos for maintenance purposes.
       'hrsh7th/cmp-nvim-lsp',
+      'hrsh7th/cmp-buffer',
+      'hrsh7th/cmp-cmdline',
       'hrsh7th/cmp-path',
     },
     config = function()
@@ -830,11 +853,64 @@ require('lazy').setup({
         },
         sources = {
           { name = 'nvim_lsp' },
+          { name = 'bufer' },
           { name = 'luasnip' },
           { name = 'path' },
         },
       }
     end,
+  },
+
+  -----------------------------------------------------------------------------
+  -- PYTHON REPL
+  -- A basic REPL that opens up as a horizontal split
+  -- - use `<leader>i` to toggle the REPL
+  -- - use `<leader>I` to restart the REPL
+  -- - `+` serves as the "send to REPL" operator. That means we can use `++`
+  -- to send the current line to the REPL, and `+j` to send the current and the
+  -- following line to the REPL, like we would do with other vim operators.
+  {
+    'Vigemus/iron.nvim',
+    keys = {
+      { '<leader>i', vim.cmd.IronRepl, desc = '󱠤 Toggle REPL' },
+      { '<leader>I', vim.cmd.IronRestart, desc = '󱠤 Restart REPL' },
+
+      -- these keymaps need no right-hand-side, since that is defined by the
+      -- plugin config further below
+      { '+', mode = { 'n', 'x' }, desc = '󱠤 Send-to-REPL Operator' },
+      { '++', desc = '󱠤 Send Line to REPL' },
+    },
+
+    -- since irons's setup call is `require("iron.core").setup`, instead of
+    -- `require("iron").setup` like other plugins would do, we need to tell
+    -- lazy.nvim which module to via the `main` key
+    main = 'iron.core',
+    opts = {
+      keymaps = {
+        send_line = '++',
+        visual_send = '+',
+        send_motion = '+',
+      },
+      config = {
+        -- this defined how the repl is opened. Here we set the REPL window
+        -- to open in a horizontal split to a bottom, with a height of 10
+        -- cells.
+        repl_open_cmd = 'horizontal bot 10 split',
+
+        -- since the python repl does not play well with indents, it's
+        -- preferable to use `ipython` or `bypython` here.
+        -- (see: https://github.com/Vigemus/iron.nvim/issues/348)
+        repl_definition = {
+          python = {
+            command = function()
+              local ipythonAvailable = vim.fn.executable 'ipython' == 1
+              local binary = ipythonAvailable and 'ipython' or 'python3'
+              return { binary }
+            end,
+          },
+        },
+      },
+    },
   },
 
   { -- You can easily change to a different colorscheme.
@@ -964,19 +1040,19 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+  require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
@@ -998,6 +1074,58 @@ require('lazy').setup({
     },
   },
 })
+
+-- Create group to assign commands
+-- "clear = true" must be set to prevent loading an
+-- auto-command repeatedly every time a file is resourced
+local autocmd_group = vim.api.nvim_create_augroup('Custom auto-commands', { clear = true })
+
+-- vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
+--   pattern = { '*.yaml', '*.yml' },
+--   desc = 'Auto-format YAML files after saving',
+--   callback = function()
+--     local fileName = vim.api.nvim_buf_get_name(0)
+--     vim.cmd(':!yamlfmt ' .. fileName)
+--   end,
+--   group = autocmd_group,
+-- })
+
+-- BASIC PYTHON-RELATED OPTIONS
+
+-- The filetype-autocmd runs a function when opening a file with the filetype
+-- "python". This method allows you to make filetype-specific configurations. In
+-- there, you have to use `opt_local` instead of `opt` to limit the changes to
+-- just that buffer. (As an alternative to using an autocmd, you can also put those
+-- configurations into a file `/after/ftplugin/{filetype}.lua` in your
+-- nvim-directory.)
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'python', -- filetype for which to run the autocmd
+  callback = function()
+    -- use pep8 standards
+    vim.opt_local.expandtab = true
+    vim.opt_local.shiftwidth = 4
+    vim.opt_local.tabstop = 4
+    vim.opt_local.softtabstop = 4
+
+    -- folds based on indentation https://neovim.io/doc/user/fold.html#fold-indent
+    -- if you are a heavy user of folds, consider using `nvim-ufo`
+    -- vim.opt_local.foldmethod = 'indent'
+
+    -- automatically capitalize boolean values. Useful if you come from a
+    -- different language, and lowercase them out of habit.
+    vim.cmd.inoreabbrev '<buffer> true True'
+    vim.cmd.inoreabbrev '<buffer> false False'
+
+    -- in the same way, we can fix habits regarding comments or None
+    vim.cmd.inoreabbrev '<buffer> -- #'
+    vim.cmd.inoreabbrev '<buffer> null None'
+    vim.cmd.inoreabbrev '<buffer> none None'
+    vim.cmd.inoreabbrev '<buffer> nil None'
+  end,
+})
+
+-- lspimport keymap
+vim.keymap.set('n', '<leader>a', require('lspimport').import, { noremap = true, desc = '[L]sp [I]mport' })
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
